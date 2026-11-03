@@ -12,12 +12,14 @@
 #include <stdbool.h>
 #include <assert.h>
 
+
 typedef struct {
 	uint8_t* buffer;
 	uint32_t capacity;
 	volatile uint32_t head;
 	volatile uint32_t tail;
 }CircularBuffer_t;
+
 
 void CBinit(CircularBuffer_t* cb, uint8_t* storage_array, uint32_t size);
 
