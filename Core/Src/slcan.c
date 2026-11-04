@@ -20,7 +20,7 @@ uint8_t charToHex(char c) {
 		return ((c - 'a') + 10);
 	}
 
-	return 0; //Error
+	return 0;
 }
 
 bool SLCANToCAN(CircularBuffer_t* cb, CANQueue_t* canq) {
