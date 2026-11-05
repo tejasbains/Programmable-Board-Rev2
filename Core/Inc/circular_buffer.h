@@ -27,4 +27,6 @@ bool CBpush(CircularBuffer_t* cb, uint8_t data);
 
 bool CBpop(CircularBuffer_t* cb, uint8_t* data);
 
+bool CBpop_upto(CircularBuffer_t* cb, uint32_t limit_head, uint8_t* data);
+
 #endif /* INC_CIRCULAR_BUFFER_H_ */
