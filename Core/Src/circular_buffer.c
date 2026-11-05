@@ -36,3 +36,13 @@ bool CBpop(CircularBuffer_t* cb, uint8_t* data) {
 
 	return true;
 }
+
+bool CBpop_upto(CircularBuffer_t* cb, uint32_t limit_head, uint8_t* data) {
+    if (limit_head == cb->tail) {
+        return false;
+    }
+
+    *data = cb->buffer[cb->tail];
+    cb->tail = (cb->tail + 1) & (cb->capacity - 1);
+    return true;
+}

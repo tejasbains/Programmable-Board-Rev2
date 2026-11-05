@@ -5,11 +5,18 @@
  *      Author: arthi
  */
 
-#include <slcan.h>
+#include <can_translator.h>
 
 
 #define NUM_OF_BITS_IN_HEX 4U
 
+
+static CANTranslatorStats_t stats = {0};
+
+
+void CANTranslator_GetStats(CANTranslatorStats_t* out_stats) {
+    *out_stats = stats;
+}
 
 uint8_t charToHex(char c) {
 	if (c >= '0' && c <= '9') {
@@ -28,13 +35,18 @@ bool SLCANToCAN(CircularBuffer_t* cb, CANQueue_t* canq) {
 	static uint8_t index = 0;
 	static bool discard_mode = false;
 
+	uint8_t raw_byte;
+
 	uint32_t current_head = cb->head;
 	CANMessage_t can_mssg;
 	can_mssg.retries = 0;
 
 	while(current_head != cb->tail) {
-		char c = cb->buffer[cb->tail];
-		cb->tail = (cb->tail + 1) & (cb->capacity - 1);
+
+		if (!CBpop_upto(cb, current_head, &raw_byte)) {
+			break; // Reached snapshot limit
+		}
+		char c = (char)raw_byte;
 
 		if(c == '\r') {
 			if (discard_mode) {
@@ -47,17 +59,22 @@ bool SLCANToCAN(CircularBuffer_t* cb, CANQueue_t* canq) {
 
 			if(line_buffer[0] == 't') {
 				id_length = 3;
+				can_mssg.is_extended = false;
 			} else if (line_buffer[0] == 'T') {
 				id_length = 8;
+				can_mssg.is_extended = true;
 			} else {
 				index = 0;
+				stats.invalid_command_headers++;
 				return false;
 			}
 
 			uint32_t id = 0;
+
 			for(int i = 1U; i <= id_length; i++) {
 				id = (id << NUM_OF_BITS_IN_HEX) | charToHex(line_buffer[i]);
 			}
+
 			can_mssg.id = id;
 
 			uint8_t dlc_index = id_length + 1;
@@ -65,6 +82,7 @@ bool SLCANToCAN(CircularBuffer_t* cb, CANQueue_t* canq) {
 
 			if(dlc > 8) {
 				index = 0;
+				stats.invalid_dlc_errors++;
 				return false;
 			}
 
@@ -91,11 +109,12 @@ bool SLCANToCAN(CircularBuffer_t* cb, CANQueue_t* canq) {
 			if (index < sizeof(line_buffer)) {
 				line_buffer[index++] = c;
 			} else {
+				stats.buffer_overflows++;
 				discard_mode = true;
-				index = 0;
 			}
 		}
 	}
 
 	return true;
 }
+
